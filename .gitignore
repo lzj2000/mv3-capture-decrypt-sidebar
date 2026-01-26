@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.DS_Store
+.idea/
+.vscode/
+*.log
+*.tgz
+*.zip
+pnpm-debug.log*
+.env
+.env.*
