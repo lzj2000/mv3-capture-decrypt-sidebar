@@ -10,7 +10,7 @@
     "noUncheckedIndexedAccess": true,
     "useDefineForClassFields": true,
     "skipLibCheck": true,
-    "types": ["node"],
+    "types": ["node", "chrome"],
     "baseUrl": ".",
     "paths": {
       "@shared/*": ["src/shared/*"]
