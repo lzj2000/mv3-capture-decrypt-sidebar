@@ -1,4 +1,4 @@
-﻿# 鏋舵瀯璇存槑锛圡V3 鎶撳寘 + 瑙ｅ瘑渚ц竟鏍忥級
+# 鏋舵瀯璇存槑锛圡V3 鎶撳寘 + 瑙ｅ瘑渚ц竟鏍忥級
 
 ## 鐩爣涓庤寖鍥?
 - 鐩爣锛氬熀浜?Chrome MV3 鎹曡幏褰撳墠鏍囩椤电綉缁滆姹?鍝嶅簲锛屽敖鍙兘鑾峰彇 headers/body锛屽苟瀹炴椂鎺ㄩ€佸埌 DevTools 面板 灞曠ず锛涙敮鎸佺紪瑙ｇ爜/鍔犺В瀵嗕笌鍙粍鍚堚€滆В瀵嗘祦姘寸嚎鈥濄€?- 鑼冨洿锛氳皟璇曚笌鍒嗘瀽鐢ㄩ€旓紱涓嶅仛鎸佷箙鎶撳寘鏈嶅姟锛屼笉鍋氳繙绋嬩笂鎶ャ€?
@@ -12,19 +12,19 @@
   - 棰勭暀锛岄粯璁や笉鍙備笌鎶撳寘涓庤В瀵嗕富娴佺▼銆?
 ## 鏁版嵁娴佷笌鏃跺簭
 
-1) 鐢ㄦ埛鎵撳紑 DevTools 面板 骞堕€変腑鐩爣鏍囩椤点€? 
-2) DevTools 面板 璇锋眰鍚庡彴 attach锛涘悗鍙板 tabId attach `chrome.debugger`銆? 
-3) 鍚庡彴鐩戝惉 `Network.requestWillBeSent`銆乣Network.responseReceived`銆乣Network.loadingFinished`銆? 
-4) 鍦ㄥ悎閫傛椂鏈烘媺鍙?request/response body锛圕DP API锛夛紝缁勮涓烘爣鍑嗗寲璁板綍銆? 
-5) 鏍规嵁 URL 瑙勫垯鍖归厤娴佹按绾块厤缃紝鍚庡彴鎵ц瑙ｅ瘑骞剁敓鎴愮粨鏋溿€? 
-6) 鍚庡彴灏嗚褰曚笌瑙ｅ瘑缁撴灉鎺ㄩ€佸埌 DevTools 面板锛孶I 娓叉煋鍒楄〃涓庤鎯呫€? 
+1) 鐢ㄦ埛鎵撳紑 DevTools 面板 骞堕€変腑鐩爣鏍囩椤点€?
+2) DevTools 面板 璇锋眰鍚庡彴 attach锛涘悗鍙板 tabId attach `chrome.debugger`銆?
+3) 鍚庡彴鐩戝惉 `Network.requestWillBeSent`銆乣Network.responseReceived`銆乣Network.loadingFinished`銆?
+4) 鍦ㄥ悎閫傛椂鏈烘媺鍙?request/response body锛圕DP API锛夛紝缁勮涓烘爣鍑嗗寲璁板綍銆?
+5) 鏍规嵁 URL 瑙勫垯鍖归厤娴佹按绾块厤缃紝鍚庡彴鎵ц瑙ｅ瘑骞剁敓鎴愮粨鏋溿€?
+6) 鍚庡彴灏嗚褰曚笌瑙ｅ瘑缁撴灉鎺ㄩ€佸埌 DevTools 面板锛孶I 娓叉煋鍒楄〃涓庤鎯呫€?
 
 ## 鐩綍缁撴瀯锛堝缓璁級
 
-- `src/background/`锛氳皟璇曠洃鍚€佷簨浠惰仛鍚堛€佽褰曠紦瀛樸€佹秷鎭箍鎾? 
-- `src/sidepanel/`锛歊eact 瑙嗗浘銆佺姸鎬佺鐞嗐€侀厤缃〃鍗曘€佽鎯呴潰鏉? 
-- `src/shared/`锛氭秷鎭崗璁€佺被鍨嬨€佽鍒欎笌娴佹按绾垮畾涔夈€佽В瀵嗗伐鍏? 
-- `assets/`锛氬浘鏍囩瓑闈欐€佽祫婧? 
+- `src/background/`锛氳皟璇曠洃鍚€佷簨浠惰仛鍚堛€佽褰曠紦瀛樸€佹秷鎭箍鎾?
+- `src/sidepanel/`锛歊eact 瑙嗗浘銆佺姸鎬佺鐞嗐€侀厤缃〃鍗曘€佽鎯呴潰鏉?
+- `src/shared/`锛氭秷鎭崗璁€佺被鍨嬨€佽鍒欎笌娴佹按绾垮畾涔夈€佽В瀵嗗伐鍏?
+- `assets/`锛氬浘鏍囩瓑闈欐€佽祫婧?
 
 ## 娑堟伅鍗忚锛堝師鍒欙級
 

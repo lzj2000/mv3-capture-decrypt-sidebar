@@ -1,11 +1,11 @@
 // Demo card data.
 const demoItems = [
   { id: 'req-1', method: 'GET', url: 'https://api.example.com/user' },
-  { id: 'req-2', method: 'POST', url: 'https://api.example.com/login' }
+  { id: 'req-2', method: 'POST', url: 'https://api.example.com/login' },
 ]
 
 // Render a demo row.
-function renderDemoRow(item: { id: string; method: string; url: string }) {
+function renderDemoRow(item: { id: string, method: string, url: string }) {
   return (
     <div
       key={item.id}

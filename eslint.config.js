@@ -7,7 +7,7 @@ export default antfu(
   },
   {
     rules: {
-      'no-console': 'off'
-    }
-  }
+      'no-console': 'off',
+    },
+  },
 )

@@ -18,12 +18,12 @@ export const manifest: ManifestV3Export = {
   name: EXTENSION_NAME,
   version: EXTENSION_VERSION,
   action: {
-    default_title: ACTION_TITLE
+    default_title: ACTION_TITLE,
   },
   devtools_page: 'devtools.html',
   background: {
     service_worker: 'src/background/index.ts',
-    type: 'module'
+    type: 'module',
   },
-  permissions: [...EXTENSION_PERMISSIONS]
+  permissions: [...EXTENSION_PERMISSIONS],
 }
