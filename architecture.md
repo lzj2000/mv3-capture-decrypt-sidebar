@@ -1,38 +1,59 @@
-# 鏋舵瀯璇存槑锛圡V3 鎶撳寘 + 瑙ｅ瘑渚ц竟鏍忥級
+# 架构说明（MV3 抓包 + 解密侧边栏）
 
-## 鐩爣涓庤寖鍥?
-- 鐩爣锛氬熀浜?Chrome MV3 鎹曡幏褰撳墠鏍囩椤电綉缁滆姹?鍝嶅簲锛屽敖鍙兘鑾峰彇 headers/body锛屽苟瀹炴椂鎺ㄩ€佸埌 DevTools 面板 灞曠ず锛涙敮鎸佺紪瑙ｇ爜/鍔犺В瀵嗕笌鍙粍鍚堚€滆В瀵嗘祦姘寸嚎鈥濄€?- 鑼冨洿锛氳皟璇曚笌鍒嗘瀽鐢ㄩ€旓紱涓嶅仛鎸佷箙鎶撳寘鏈嶅姟锛屼笉鍋氳繙绋嬩笂鎶ャ€?
-## 鍏抽敭鑳藉姏
+## 目标与范围
+- 目标：基于 Chrome MV3 捕获当前标签页网络请求/响应，尽可能获取 headers/body，并实时推送到 DevTools 面板 展示；支持编解码/加解密与可组合“解密流水线”。
+- 范围：调试与分析用途；不做持久抓包服务，不做远程上报。
 
-- 閫氳繃 `chrome.debugger` 鐩戝惉 `Network.*` 浜嬩欢锛屾崟鑾疯姹?鍝嶅簲澶翠笌姝ｆ枃銆?- 瀹炴椂鎺ㄩ€侊細鍚庡彴灏嗘崟鑾锋暟鎹祦寮忓彂閫佸埌 DevTools 面板锛圧eact UI锛夈€?- 瑙ｅ瘑娴佹按绾匡細鎸?URL 瑙勫垯鍖归厤鍚庢墽琛屽姝ョ紪瑙ｇ爜/瑙ｅ瘑锛屽苟灞曠ず鍘熸枃涓庢槑鏂囥€?
-## 妯″潡鍒掑垎
+## 关键能力
+- 通过 `chrome.debugger` 监听 `Network.*` 事件，捕获请求/响应头与正文。
+- 实时推送：后台将捕获数据流式发送到 DevTools 面板（React UI）。
+- 解密流水线：按 URL 规则匹配后执行多步编解码/解密，并展示原文与明文。
 
-- `background`锛圫ervice Worker锛?  - 璐熻矗 attach/detach銆佺洃鍚綉缁滀簨浠躲€佸彇 body銆侀檺娴佷笌缂撳瓨銆佹秷鎭箍鎾€?- `sidepanel`锛圧eact UI锛?  - 鍒楄〃/璇︽儏灞曠ず銆佽鍒欓厤缃€佸弬鏁拌緭鍏ワ紙key/iv锛夈€佹祦姘寸嚎棰勮涓庢墽琛屻€?- `shared`
-  - 娑堟伅鍗忚涓庣被鍨嬨€佽В瀵嗘祦姘寸嚎瀹氫箟銆佸伐鍏峰嚱鏁帮紙闈?chrome 渚濊禆锛夈€?- `content`
-  - 棰勭暀锛岄粯璁や笉鍙備笌鎶撳寘涓庤В瀵嗕富娴佺▼銆?
-## 鏁版嵁娴佷笌鏃跺簭
+## 模块划分
+- `background`（Service Worker）
+  - 负责 attach/detach、监听网络事件、取 body、限流与缓存、消息广播。
+- `sidepanel`（React UI）
+  - 列表/详情展示、规则配置、参数输入（key/iv）、流水线预览与执行。
+- `shared`
+  - 消息协议与类型、解密流水线定义、工具函数（无 chrome 依赖）。
+- `content`
+  - 预留，默认不参与抓包与解密主流程。
 
-1) 鐢ㄦ埛鎵撳紑 DevTools 面板 骞堕€変腑鐩爣鏍囩椤点€?
-2) DevTools 面板 璇锋眰鍚庡彴 attach锛涘悗鍙板 tabId attach `chrome.debugger`銆?
-3) 鍚庡彴鐩戝惉 `Network.requestWillBeSent`銆乣Network.responseReceived`銆乣Network.loadingFinished`銆?
-4) 鍦ㄥ悎閫傛椂鏈烘媺鍙?request/response body锛圕DP API锛夛紝缁勮涓烘爣鍑嗗寲璁板綍銆?
-5) 鏍规嵁 URL 瑙勫垯鍖归厤娴佹按绾块厤缃紝鍚庡彴鎵ц瑙ｅ瘑骞剁敓鎴愮粨鏋溿€?
-6) 鍚庡彴灏嗚褰曚笌瑙ｅ瘑缁撴灉鎺ㄩ€佸埌 DevTools 面板锛孶I 娓叉煋鍒楄〃涓庤鎯呫€?
+## 数据流与时序
+1) 用户打开 DevTools 面板 并选中目标标签页。
+2) DevTools 面板 请求后台 attach；后台对 tabId attach `chrome.debugger`。
+3) 后台监听 `Network.requestWillBeSent`、`Network.responseReceived`、`Network.loadingFinished`。
+4) 在合适时机拉取 request/response body（CDP API），组装为标准化记录。
+5) 根据 URL 规则匹配流水线配置，后台执行解密并生成结果。
+6) 后台将记录与解密结果推送到 DevTools 面板，UI 渲染列表与详情。
 
-## 鐩綍缁撴瀯锛堝缓璁級
+## 目录结构（建议）
+- `src/background/`：调试监听、事件聚合、记录缓存、消息广播。
+- `src/sidepanel/`：React 视图、状态管理、配置表单、详情面板。
+- `src/shared/`：消息协议、类型、规则与流水线定义、解密工具。
+- `assets/`：图标等静态资源。
 
-- `src/background/`锛氳皟璇曠洃鍚€佷簨浠惰仛鍚堛€佽褰曠紦瀛樸€佹秷鎭箍鎾?
-- `src/sidepanel/`锛歊eact 瑙嗗浘銆佺姸鎬佺鐞嗐€侀厤缃〃鍗曘€佽鎯呴潰鏉?
-- `src/shared/`锛氭秷鎭崗璁€佺被鍨嬨€佽鍒欎笌娴佹按绾垮畾涔夈€佽В瀵嗗伐鍏?
-- `assets/`锛氬浘鏍囩瓑闈欐€佽祫婧?
+## 消息协议（原则）
+- UI ↔ BG 的消息类型集中定义于 `src/shared/messages.ts`。
+- 消息必须显式区分请求/响应方向，带 `tabId` 与 `requestId`。
+- 后台采用广播或订阅式推送，避免 UI 轮询。
 
-## 娑堟伅鍗忚锛堝師鍒欙級
+## 抓包与解密策略
+- 抓包：
+  - 以 `requestId` 聚合请求与响应。
+  - 通过 CDP `Network.getResponseBody` 等 API 拉取正文。
+  - 对大体积正文应用阈值策略（不解析/不解密）。
+- 解密流水线：
+  - 由多步“算子”组成（如 base64 decode、AES decrypt、JSON parse）。
+  - 支持参数化（key/iv/encoding），支持顺序执行与失败返回。
+  - 与 URL 规则匹配绑定，命中即执行。
 
-- UI 鈫?BG 鐨勬秷鎭被鍨嬮泦涓畾涔変簬 `src/shared/messages.ts`銆?- 娑堟伅蹇呴』鏄惧紡鍖哄垎璇锋眰/鍝嶅簲鏂瑰悜锛屽甫 `tabId` 涓?`requestId`銆?- 鍚庡彴閲囩敤骞挎挱鎴栬闃呭紡鎺ㄩ€侊紝閬垮厤 UI 杞銆?
-## 鎶撳寘涓庤В瀵嗙瓥鐣?
-- 鎶撳寘锛?  - 浠?`requestId` 鑱氬悎璇锋眰涓庡搷搴斻€?  - 閫氳繃 CDP `Network.getResponseBody` 绛?API 鎷夊彇姝ｆ枃銆?  - 瀵瑰ぇ浣撶Н姝ｆ枃搴旂敤闃堝€肩瓥鐣ワ紙涓嶈В鏋?涓嶈В瀵嗭級銆?- 瑙ｅ瘑娴佹按绾匡細
-  - 鐢卞姝モ€滅畻瀛愨€濈粍鎴愶紙濡?base64 decode銆丄ES decrypt銆丣SON parse锛夈€?  - 鏀寔鍙傛暟鍖栵紙key/iv/encoding锛夛紝鏀寔椤哄簭鎵ц涓庡け璐ヨ繑鍥炪€?  - 涓?URL 瑙勫垯鍖归厤缁戝畾锛屽懡涓嵆鎵ц銆?
-## 閰嶇疆涓庡瓨鍌?
-- 閰嶇疆锛堣鍒欍€佹祦姘寸嚎銆侀粯璁ゅ弬鏁帮級瀛樹簬 `chrome.storage`銆?- UI 璐熻矗閰嶇疆缂栬緫涓庝笅鍙戯紱鍚庡彴璐熻矗璇诲彇涓庢墽琛屻€?
-## 鎬ц兘涓庡畨鍏?
-- 浠呭褰撳墠 tab attach锛岄伩鍏嶅叏灞€鐩戝惉銆?- 闄愬埗缂撳瓨闀垮害锛堢幆褰㈢紦瀛橈級锛岄伩鍏?SW 鍐呭瓨鑶ㄨ儉銆?- 涓嶈褰曟晱鎰熷唴瀹瑰埌鏃ュ織锛涗笉鍋氭槑鏂囨寔涔呭寲銆?- 澶辫触蹇€熻繑鍥烇紝纭繚 UI 娴佺晠銆?
+## 配置与存储
+- 配置（规则、流水线、默认参数）存于 `chrome.storage`。
+- UI 负责配置编辑与下发；后台负责读取与执行。
+
+## 性能与安全
+- 仅对当前 tab attach，避免全局监听。
+- 限制缓存长度（环形缓存），避免 SW 内存膨胀。
+- 不记录敏感内容到日志；不做明文持久化。
+- 失败快速返回，确保 UI 流畅。
