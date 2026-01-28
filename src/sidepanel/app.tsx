@@ -30,6 +30,9 @@ const SPLITTER_WIDTH = 6
 /** 预览展示的最大行数。 */
 const PREVIEW_MAX_LINES = 60
 
+/** 预览展示的最大字符数。 */
+const PREVIEW_MAX_CHARS = 4000
+
 /** 高亮颜色 class。 */
 const HIGHLIGHT_CLASS_NAME = 'bg-yellow-200 text-slate-900'
 
@@ -74,19 +77,32 @@ function formatTime(timeStamp: number): string {
   return `${date.toLocaleTimeString()} ${date.toLocaleDateString()}`
 }
 
-/** 提取请求名称。 */
-function formatRequestName(url: string): string {
+/** 提取请求路径。 */
+function formatRequestPath(url: string): string {
   // 解析 URL。
   try {
     // 解析 URL 对象。
     const parsed = new URL(url)
-    // 计算展示路径。
-    const pathName = parsed.pathname === '/' ? parsed.hostname : `${parsed.hostname}${parsed.pathname}`
-    return pathName
+    // 拼接路径与查询参数。
+    const path = parsed.pathname || '/'
+    return parsed.search ? `${path}${parsed.search}` : path
   }
   catch {
     // URL 解析失败时降级为原始字符串。
     return url
+  }
+}
+
+/** 提取请求域名。 */
+function formatRequestHost(url: string): string {
+  // 解析 URL。
+  try {
+    // 解析 URL 对象。
+    const parsed = new URL(url)
+    return parsed.host
+  }
+  catch {
+    return ''
   }
 }
 
@@ -165,7 +181,7 @@ function getByteLength(text: string): number {
   return TEXT_ENCODER.encode(text).length
 }
 
-/** 将 base64 解码为文本。 */
+/** 将 Base64 解码为文本。 */
 function decodeBase64ToText(value: string): { ok: true, text: string } | { ok: false, message: string } {
   try {
     // 去除空白字符。
@@ -182,7 +198,7 @@ function decodeBase64ToText(value: string): { ok: true, text: string } | { ok: f
     return { ok: true, text: decoded }
   }
   catch {
-    return { ok: false, message: 'base64 解码失败' }
+    return { ok: false, message: 'Base64 解码失败' }
   }
 }
 
@@ -242,32 +258,35 @@ function renderKeyValueTable(rows: KeyValueRow[]): ReactNode {
 }
 
 /** 渲染文本区块（支持预览/搜索高亮）。 */
-function renderTextBlock(text: string, keyword: string, expanded: boolean): ReactNode {
+function renderTextBlock(text: string, keyword: string, expanded: boolean): { node: ReactNode, hasOverflow: boolean } {
   // 行列表。
   const lines = text.split(/\r?\n/)
-  // 是否超出。
-  const hasOverflow = lines.length > PREVIEW_MAX_LINES
+  // 是否超出行数。
+  const hasLineOverflow = lines.length > PREVIEW_MAX_LINES
+  // 是否超出字符数。
+  const hasCharOverflow = text.length > PREVIEW_MAX_CHARS
+  // 是否超出预览限制。
+  const hasOverflow = hasLineOverflow || hasCharOverflow
   // 预览文本。
-  const previewText = expanded || !hasOverflow
-    ? text
-    : lines.slice(0, PREVIEW_MAX_LINES).join('\n')
-  return (
-    <div className="grid gap-2">
-      <pre className="whitespace-pre-wrap break-words font-mono text-[11px]">
-        {highlightText(previewText, keyword)}
-      </pre>
-      {hasOverflow && !expanded
-        ? (
-            <div className="text-[11px] text-slate-400">
-              已截断预览，仅展示前
-              {PREVIEW_MAX_LINES}
-              {' '}
-              行
-            </div>
-          )
-        : null}
-    </div>
-  )
+  let previewText = text
+  if (!expanded && hasOverflow) {
+    if (hasLineOverflow) {
+      previewText = lines.slice(0, PREVIEW_MAX_LINES).join('\n')
+    }
+    else {
+      previewText = text.slice(0, PREVIEW_MAX_CHARS)
+    }
+  }
+  return {
+    node: (
+      <div className="grid gap-2">
+        <pre className="whitespace-pre-wrap break-words font-mono text-[11px]">
+          {highlightText(previewText, keyword)}
+        </pre>
+      </div>
+    ),
+    hasOverflow,
+  }
 }
 
 /** 分区容器。 */
@@ -349,7 +368,7 @@ function parseAppError(value: unknown): AppError | null {
   return { code, message, cause }
 }
 
-/** 解析响应体。 */
+/** 解析响应正文。 */
 function parseResponseBody(value: unknown): ResponseBody | null {
   if (!isRecord(value))
     return null
@@ -381,7 +400,7 @@ function parseResponseBody(value: unknown): ResponseBody | null {
   }
 }
 
-/** 解析请求体。 */
+/** 解析请求正文。 */
 function parseRequestBody(value: unknown): RequestBody | null {
   if (!isRecord(value))
     return null
@@ -425,9 +444,9 @@ function parseResponseRecord(value: unknown): ResponseRecord | null {
   const encodedDataLength = asNumber(value.encodedDataLength)
   if (!id || !url || !method || status === null || !mimeType || !resourceType || timeStamp === null || encodedDataLength === null)
     return null
-  // 请求体。
+  // 请求正文。
   const requestBody = parseRequestBody(value.requestBody)
-  // 响应体。
+  // 响应正文。
   const body = parseResponseBody(value.body)
   if (!requestBody || !body)
     return null
@@ -451,11 +470,11 @@ function parseBackgroundMessage(value: unknown): BackgroundToPanelMessage | null
     return null
 
   // 读取消息类型。
-  const messageType = asString(value.type)
-  if (!messageType)
+  const message资源类型 = asString(value.type)
+  if (!message资源类型)
     return null
 
-  if (messageType === 'status.update') {
+  if (message资源类型 === 'status.update') {
     // 解析 attachedTabId。
     const attachedTabId = asNumber(value.attachedTabId)
     if (attachedTabId === null && value.attachedTabId !== null)
@@ -463,7 +482,7 @@ function parseBackgroundMessage(value: unknown): BackgroundToPanelMessage | null
     return { type: 'status.update', attachedTabId }
   }
 
-  if (messageType === 'records.snapshot') {
+  if (message资源类型 === 'records.snapshot') {
     // 解析 records。
     const records = Array.isArray(value.records) ? value.records : null
     if (!records)
@@ -487,7 +506,7 @@ function parseBackgroundMessage(value: unknown): BackgroundToPanelMessage | null
     }
   }
 
-  if (messageType === 'records.added') {
+  if (message资源类型 === 'records.added') {
     // 解析 record。
     const parsedRecord = parseResponseRecord(value.record)
     if (!parsedRecord)
@@ -495,7 +514,7 @@ function parseBackgroundMessage(value: unknown): BackgroundToPanelMessage | null
     return { type: 'records.added', record: parsedRecord }
   }
 
-  if (messageType === 'error') {
+  if (message资源类型 === 'error') {
     // 解析 error。
     const parsedError = parseAppError(value.error)
     if (!parsedError)
@@ -535,22 +554,24 @@ export function App() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   /** 左侧面板宽度百分比。 */
   const [leftPercent, setLeftPercent] = useState(DEFAULT_LEFT_PERCENT)
-  /** 请求体搜索关键词。 */
+  /** 请求正文搜索关键词。 */
   const [requestSearch, setRequestSearch] = useState('')
-  /** 响应体搜索关键词。 */
+  /** 响应正文搜索关键词。 */
   const [responseSearch, setResponseSearch] = useState('')
-  /** 请求体是否展开。 */
+  /** 请求正文是否展开。 */
   const [requestExpanded, setRequestExpanded] = useState(false)
-  /** 响应体是否展开。 */
+  /** 响应正文是否展开。 */
   const [responseExpanded, setResponseExpanded] = useState(false)
-  /** Query 区块是否展开。 */
+  /** 查询参数 区块是否展开。 */
   const [queryOpen, setQueryOpen] = useState(true)
-  /** 请求体区块是否展开。 */
+  /** 请求正文区块是否展开。 */
   const [requestOpen, setRequestOpen] = useState(true)
-  /** 响应体区块是否展开。 */
+  /** 响应正文区块是否展开。 */
   const [responseOpen, setResponseOpen] = useState(true)
-  /** 响应体 base64 解码开关。 */
+  /** 响应正文 Base64 解码开关。 */
   const [decodeResponseBase64, setDecodeResponseBase64] = useState(false)
+  /** 顶部信息是否折叠。 */
+  const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false)
 
   /** 拖拽移动事件。 */
   const handleResizeMove = useCallback((event: MouseEvent): void => {
@@ -660,7 +681,15 @@ export function App() {
     setRequestExpanded(false)
     setResponseExpanded(false)
     setDecodeResponseBase64(false)
-  }, [selectedId])
+
+    const current = records.find(record => record.id === selectedId) ?? null
+    const hasQuery = current ? getQueryRows(current.url).length > 0 : false
+    const hasRequest = current ? (current.requestBody.text !== null || !!current.requestBody.error) : false
+    const hasResponse = current ? (current.body.text !== null || !!current.body.error) : false
+    setQueryOpen(hasQuery)
+    setRequestOpen(hasRequest)
+    setResponseOpen(hasResponse)
+  }, [records, selectedId])
 
   // 卸载时清理拖拽监听。
   useEffect(() => {
@@ -703,7 +732,8 @@ export function App() {
     setSelectedId(recordId)
   }
 
-  /** 请求体展示内容。 */
+  /** 请求正文展示内容。 */
+
   const requestDisplay = useMemo(() => {
     if (!selectedRecord)
       return null
@@ -733,7 +763,7 @@ export function App() {
     }
   }, [selectedRecord])
 
-  /** 响应体展示内容。 */
+  /** 响应正文展示内容。 */
   const responseDisplay = useMemo(() => {
     if (!selectedRecord)
       return null
@@ -742,7 +772,7 @@ export function App() {
     // 原始文本。
     let rawText = selectedRecord.body.text
     if (selectedRecord.body.isBase64 && decodeResponseBase64) {
-      // base64 解码结果。
+      // Base64 解码结果。
       const decoded = decodeBase64ToText(rawText)
       if (!decoded.ok) {
         return {
@@ -775,27 +805,40 @@ export function App() {
     }
   }, [selectedRecord, decodeResponseBase64])
 
-  /** Query 行数据。 */
+  /** 请求正文文本区块。 */
+  const requestTextBlock: { node: ReactNode, hasOverflow: boolean } | null = useMemo(() => {
+    if (!requestDisplay || requestDisplay.kind === 'form')
+      return null
+    return renderTextBlock(requestDisplay.text, requestSearch, requestExpanded)
+  }, [requestDisplay, requestSearch, requestExpanded])
+
+  /** 响应正文文本区块。 */
+  const responseTextBlock: { node: ReactNode, hasOverflow: boolean } | null = useMemo(() => {
+    if (!responseDisplay || responseDisplay.kind === 'form')
+      return null
+    return renderTextBlock(responseDisplay.text, responseSearch, responseExpanded)
+  }, [responseDisplay, responseSearch, responseExpanded])
+  /** 查询参数 行数据。 */
   const queryRows = useMemo(() => {
     if (!selectedRecord)
       return []
     return getQueryRows(selectedRecord.url)
   }, [selectedRecord])
 
-  /** Query meta 信息。 */
+  /** 查询参数 meta 信息。 */
   const queryMeta = queryRows.length > 0 ? `${queryRows.length} 项` : '空'
 
-  /** 请求体 meta 信息。 */
+  /** 请求正文 meta 信息。 */
   const requestMeta = selectedRecord?.requestBody.text
     ? `${formatBytes(getByteLength(selectedRecord.requestBody.text))}${selectedRecord.requestBody.truncated ? ' · 已截断' : ''}`
     : '空'
 
-  /** 响应体 meta 信息。 */
+  /** 响应正文 meta 信息。 */
   const responseMeta = selectedRecord?.body.text
     ? `${formatBytes(getByteLength(selectedRecord.body.text))}${selectedRecord.body.truncated ? ' · 已截断' : ''}`
     : '空'
 
-  /** 响应体解码错误信息。 */
+  /** 响应正文解码错误信息。 */
   const responseDecodeError = responseDisplay && 'decodeError' in responseDisplay
     ? responseDisplay.decodeError
     : null
@@ -806,13 +849,24 @@ export function App() {
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="text-lg font-bold tracking-wide">{PANEL_TITLE}</div>
-            <div className="mt-1 text-xs text-slate-500">
-              {isAttached ? '已附加到当前标签页' : '未附加'}
-              {' '}
-              路 仅显示 Fetch / XHR
-            </div>
+            {!isHeaderCollapsed
+              ? (
+                  <div className="mt-1 text-xs text-slate-500">
+                    {isAttached ? '已附加到当前标签页' : '未附加'}
+                    {' '}
+                    路 仅显示 Fetch / XHR
+                  </div>
+                )
+              : null}
           </div>
           <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setIsHeaderCollapsed(prev => !prev)}
+              className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600"
+            >
+              {isHeaderCollapsed ? '展开' : '收起'}
+            </button>
             <button
               type="button"
               onClick={isAttached ? handleDetachClick : handleAttachClick}
@@ -829,15 +883,19 @@ export function App() {
             </button>
           </div>
         </div>
-        <div className="mt-3 text-[11px] text-slate-400">
-          当前 tabId:
-          {' '}
-          {tabId}
-          {' '}
-          | 记录数
-          {' '}
-          {records.length}
-        </div>
+        {!isHeaderCollapsed
+          ? (
+              <div className="mt-3 text-[11px] text-slate-400">
+                当前 tabId:
+                {' '}
+                {tabId}
+                {' '}
+                | 记录数
+                {' '}
+                {records.length}
+              </div>
+            )
+          : null}
       </header>
 
       {errorMessage
@@ -854,13 +912,13 @@ export function App() {
           className="flex min-h-0 flex-shrink-0 flex-col overflow-hidden rounded-2xl bg-white shadow-lg shadow-slate-200/60"
         >
           <div className="grid grid-cols-[2.2fr_0.7fr_0.7fr_0.8fr_0.9fr] gap-2 border-b border-slate-100 px-3 py-2 text-[11px] font-semibold uppercase text-slate-400">
-            <div>Name</div>
-            <div>Status</div>
-            <div>Type</div>
-            <div>Size</div>
-            <div>Time</div>
+            <div className="min-w-0 truncate" title="Name">Name</div>
+            <div className="min-w-0 truncate" title="Status">Status</div>
+            <div className="min-w-0 truncate" title="资源类型">资源类型</div>
+            <div className="min-w-0 truncate" title="响应大小">响应大小</div>
+            <div className="min-w-0 truncate" title="时间戳">时间戳</div>
           </div>
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden">
             {orderedRecords.length === 0
               ? (
                   <div className="px-4 py-6 text-center text-xs text-slate-500">
@@ -875,18 +933,21 @@ export function App() {
                       onClick={() => handleSelectRecord(record.id)}
                       className={`grid w-full grid-cols-[2.2fr_0.7fr_0.7fr_0.8fr_0.9fr] gap-2 border-b border-slate-100 px-3 py-2 text-left text-[12px] text-slate-700 transition hover:bg-slate-50 ${record.id === selectedId ? 'bg-slate-100' : ''}`}
                     >
-                      <div className="truncate">
+                      <div className="min-w-0 overflow-hidden">
                         <div className="flex items-center gap-2">
                           <span className="rounded bg-ink/90 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-white">
                             {record.method}
                           </span>
-                          <span className="truncate">{formatRequestName(record.url)}</span>
+                          <span className="truncate" title={formatRequestPath(record.url)}>{formatRequestPath(record.url)}</span>
                         </div>
+                        {formatRequestHost(record.url)
+                          ? <div className="truncate text-[10px] text-slate-400" title={formatRequestHost(record.url)}>{formatRequestHost(record.url)}</div>
+                          : null}
                       </div>
-                      <div className="text-slate-600">{record.status || '-'}</div>
-                      <div className="text-slate-600">{record.resourceType}</div>
-                      <div className="text-slate-600">{formatBytes(record.encodedDataLength)}</div>
-                      <div className="text-slate-600">{formatTime(record.timeStamp)}</div>
+                      <div className="min-w-0 truncate text-slate-600" title={String(record.status || '-')}>{record.status || '-'}</div>
+                      <div className="min-w-0 truncate text-slate-600" title={record.resourceType}>{record.resourceType}</div>
+                      <div className="min-w-0 truncate text-slate-600" title={formatBytes(record.encodedDataLength)}>{formatBytes(record.encodedDataLength)}</div>
+                      <div className="min-w-0 truncate text-slate-600" title={formatTime(record.timeStamp)}>{formatTime(record.timeStamp)}</div>
                     </button>
                   ))
                 )}
@@ -906,9 +967,9 @@ export function App() {
           className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl bg-white shadow-lg shadow-slate-200/60"
         >
           <div className="border-b border-slate-100 px-4 py-3 text-sm font-semibold text-slate-700">
-            请求详情
+            请求/响应详情
           </div>
-          <div className="flex-1 overflow-y-auto px-4 py-3">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-3">
             {selectedRecord
               ? (
                   <div className="grid gap-3 text-xs text-slate-600">
@@ -918,39 +979,15 @@ export function App() {
                     </div>
 
                     <Section
-                      title="Query"
+                      title="查询参数"
                       meta={queryMeta}
                       isOpen={queryOpen}
                       onToggle={() => setQueryOpen(prev => !prev)}
                     >
-
                       {renderKeyValueTable(queryRows)}
                     </Section>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <div className="text-[11px] uppercase text-slate-400">Mime</div>
-                        <div className="text-[13px] text-slate-700">{selectedRecord.mimeType || '-'}</div>
-                      </div>
-                      <div>
-                        <div className="text-[11px] uppercase text-slate-400">Type</div>
-                        <div className="text-[13px] text-slate-700">{selectedRecord.resourceType}</div>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <div className="text-[11px] uppercase text-slate-400">Size</div>
-                        <div className="text-[13px] text-slate-700">{formatBytes(selectedRecord.encodedDataLength)}</div>
-                      </div>
-                      <div>
-                        <div className="text-[11px] uppercase text-slate-400">Time</div>
-                        <div className="text-[13px] text-slate-700">{formatTime(selectedRecord.timeStamp)}</div>
-                      </div>
-                    </div>
-
                     <Section
-                      title="请求体"
+                      title="请求正文"
                       meta={requestMeta}
                       isOpen={requestOpen}
                       onToggle={() => setRequestOpen(prev => !prev)}
@@ -959,22 +996,22 @@ export function App() {
                         <input
                           value={requestSearch}
                           onChange={event => setRequestSearch(event.target.value)}
-                          placeholder="搜索请求体"
+                          placeholder="搜索请求正文"
                           className="w-40 rounded-md border border-slate-200 px-2 py-1 text-[11px]"
                         />
                       </div>
                       {selectedRecord.requestBody.error
                         ? <div className="text-rose-600">{selectedRecord.requestBody.error.message}</div>
                         : selectedRecord.requestBody.text === null
-                          ? <div className="text-slate-400">无请求体内容</div>
+                          ? <div className="text-slate-400">无请求正文</div>
                           : requestDisplay?.kind === 'form'
                             ? renderKeyValueTable(requestDisplay.rows)
                             : requestDisplay?.kind === 'json'
-                              ? renderTextBlock(requestDisplay.text, requestSearch, requestExpanded)
+                              ? requestTextBlock?.node
                               : requestDisplay?.kind === 'text'
-                                ? renderTextBlock(requestDisplay.text, requestSearch, requestExpanded)
+                                ? requestTextBlock?.node
                                 : null}
-                      {selectedRecord.requestBody.text && requestDisplay?.kind !== 'form'
+                      {requestTextBlock?.hasOverflow
                         ? (
                             <button
                               type="button"
@@ -986,12 +1023,12 @@ export function App() {
                           )
                         : null}
                       {selectedRecord.requestBody.truncated
-                        ? <div className="mt-2 text-[11px] text-slate-400">请求体已因大小限制截断</div>
+                        ? <div className="mt-2 text-[11px] text-slate-400">请求正文已因大小限制截断</div>
                         : null}
                     </Section>
 
                     <Section
-                      title="响应体"
+                      title="响应正文"
                       meta={responseMeta}
                       isOpen={responseOpen}
                       onToggle={() => setResponseOpen(prev => !prev)}
@@ -1000,7 +1037,7 @@ export function App() {
                         <input
                           value={responseSearch}
                           onChange={event => setResponseSearch(event.target.value)}
-                          placeholder="搜索响应体"
+                          placeholder="搜索响应正文"
                           className="w-40 rounded-md border border-slate-200 px-2 py-1 text-[11px]"
                         />
                       </div>
@@ -1012,25 +1049,25 @@ export function App() {
                                 checked={decodeResponseBase64}
                                 onChange={event => setDecodeResponseBase64(event.target.checked)}
                               />
-                              base64 解码
+                              Base64 解码
                             </label>
                           )
                         : null}
                       {selectedRecord.body.error
                         ? <div className="text-rose-600">{selectedRecord.body.error.message}</div>
                         : selectedRecord.body.text === null
-                          ? <div className="text-slate-400">无响应体内容</div>
+                          ? <div className="text-slate-400">无响应正文</div>
                           : responseDisplay?.kind === 'form'
                             ? renderKeyValueTable(responseDisplay.rows)
                             : responseDisplay?.kind === 'json'
-                              ? renderTextBlock(responseDisplay.text, responseSearch, responseExpanded)
+                              ? responseTextBlock?.node
                               : responseDisplay?.kind === 'text'
-                                ? renderTextBlock(responseDisplay.text, responseSearch, responseExpanded)
+                                ? responseTextBlock?.node
                                 : null}
                       {responseDecodeError
                         ? <div className="mt-2 text-[11px] text-rose-500">{responseDecodeError}</div>
                         : null}
-                      {selectedRecord.body.text && responseDisplay?.kind !== 'form'
+                      {responseTextBlock?.hasOverflow
                         ? (
                             <button
                               type="button"
@@ -1042,10 +1079,10 @@ export function App() {
                           )
                         : null}
                       {selectedRecord.body.isBase64
-                        ? <div className="mt-2 text-[11px] text-slate-400">响应体为 base64 编码</div>
+                        ? <div className="mt-2 text-[11px] text-slate-400">响应正文为 Base64 编码</div>
                         : null}
                       {selectedRecord.body.truncated
-                        ? <div className="mt-2 text-[11px] text-slate-400">响应体已因大小限制截断</div>
+                        ? <div className="mt-2 text-[11px] text-slate-400">响应正文超过大小限制已截断</div>
                         : null}
                     </Section>
                   </div>
