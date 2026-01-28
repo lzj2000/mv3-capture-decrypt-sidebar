@@ -1,18 +1,18 @@
 import type { ManifestV3Export } from '@crxjs/vite-plugin'
 
-// Extension display name.
+// Extension display name
 const EXTENSION_NAME = 'MV3 Capture + Decrypt Sidebar'
 
-// Extension version.
+// Extension version
 const EXTENSION_VERSION = '0.0.1'
 
-// Action button title.
+// Action button title
 const ACTION_TITLE = 'Capture + Decrypt'
 
-// Extension permissions list.
+// Extension permissions list
 const EXTENSION_PERMISSIONS = ['debugger', 'activeTab', 'storage'] as const
 
-// MV3 manifest definition for CRXJS.
+// MV3 manifest definition for CRXJS
 export const manifest: ManifestV3Export = {
   manifest_version: 3,
   name: EXTENSION_NAME,
